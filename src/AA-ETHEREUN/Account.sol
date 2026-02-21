@@ -70,10 +70,229 @@ import {SIG_VALIDATION_SUCCESS, SIG_VALIDATION_FAILED} from "lib/account-abstrac
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
+/**
+ * ============================================================================
+ * FORMAL SPECIFICATION — AccountEAA (ERC-4337 Smart Contract Account)
+ * ============================================================================
+ *
+ * @title AccountEAA
+ * @author Wasim Choudhary
+ *
+ * ============================================================================
+ * 1. CONTRACT CLASSIFICATION
+ * ============================================================================
+ *
+ * CONTRACT CATEGORY:
+ *     ERC-4337 Compatible Smart Contract Account
+ *
+ * SPECIFICATION TARGET:
+ *     ERC-4337 EntryPoint (v0.6+ interface)
+ *
+ * INTERFACE IMPLEMENTED:
+ *     IAccount (as defined by ERC-4337 reference implementation)
+ *
+ * PURPOSE:
+ *     This contract implements a minimal programmable smart contract wallet
+ *     that complies with ERC-4337 Account Abstraction standards.
+ *
+ * ============================================================================
+ * 2. SYSTEM OVERVIEW
+ * ============================================================================
+ *
+ * This contract represents a programmable Ethereum wallet that:
+ *
+ *     • Holds ETH and ERC-20 tokens
+ *     • Executes arbitrary external calls
+ *     • Validates off-chain signatures
+ *     • Prefunds gas via EntryPoint when required
+ *
+ * Unlike an Externally Owned Account (EOA):
+ *
+ *     - It does NOT sign transactions internally.
+ *     - It verifies signatures produced off-chain.
+ *     - Execution is coordinated through EntryPoint.
+ *
+ * This design enables Account Abstraction while preserving cryptographic
+ * ownership control.
+ *
+ * ============================================================================
+ * 3. ARCHITECTURE ROLE MODEL
+ * ============================================================================
+ *
+ * ROLE: Owner
+ *     - Cryptographic authority of the wallet
+ *     - Holds private key
+ *     - Signs UserOperations off-chain
+ *
+ * ROLE: EntryPoint
+ *     - Trusted execution coordinator defined by ERC-4337
+ *     - Calls validateUserOp()
+ *     - Executes wallet operations
+ *     - Handles gas accounting and bundler payments
+ *
+ * ROLE: Bundler
+ *     - Off-chain relayer
+ *     - Collects signed UserOperations
+ *     - Submits them to EntryPoint
+ *     - Receives gas compensation
+ *
+ * ============================================================================
+ * 4. TRUST ASSUMPTIONS
+ * ============================================================================
+ *
+ * ASSUMPTION A1:
+ *     EntryPoint is correctly implemented and non-malicious.
+ *
+ * WHY?
+ *     EntryPoint has authority to:
+ *         - Execute wallet calls
+ *         - Receive prefunds
+ *         - Control nonce validation
+ *
+ * WHAT IF FALSE?
+ *     A malicious EntryPoint could drain wallet funds.
+ *
+ * MITIGATION:
+ *     EntryPoint address is immutable after deployment.
+ *
+ * ASSUMPTION A2:
+ *     Owner private key remains secure.
+ *
+ * WHY?
+ *     Signature validation relies entirely on owner identity.
+ *
+ * WHAT IF FALSE?
+ *     Attacker gains full wallet control.
+ *
+ * ============================================================================
+ * 5. ERC-4337 COMPLIANCE MAPPING
+ * ============================================================================
+ *
+ * REQUIREMENT R1:
+ *     Account MUST implement validateUserOp().
+ *
+ * ✔ Implemented.
+ *
+ * REQUIREMENT R2:
+ *     validateUserOp MUST return validationData.
+ *
+ * ✔ Returns SIG_VALIDATION_SUCCESS (0) or failure.
+ *
+ * REQUIREMENT R3:
+ *     Account MUST prefund missingAccountFunds.
+ *
+ * ✔ _payPrefund() transfers required ETH to EntryPoint.
+ *
+ * REQUIREMENT R4:
+ *     Account MUST verify cryptographic signature.
+ *
+ * ✔ _signatureValidation() recovers signer and compares to owner().
+ *
+ * REQUIREMENT R5:
+ *     Account MUST prevent unauthorized direct execution.
+ *
+ * ✔ execute() restricted via onlyOwnerOrEntryPoint.
+ *
+ * REQUIREMENT R6:
+ *     Replay protection must exist.
+ *
+ * ✔ Handled by EntryPoint nonce enforcement.
+ *
+ * ============================================================================
+ * 6. GLOBAL SECURITY INVARIANTS
+ * ============================================================================
+ *
+ * INVARIANT I1:
+ *     validateUserOp() callable ONLY by EntryPoint.
+ *
+ * INVARIANT I2:
+ *     execute() callable ONLY by Owner OR EntryPoint.
+ *
+ * INVARIANT I3:
+ *     If signature recovery != owner,
+ *     validation MUST fail.
+ *
+ * INVARIANT I4:
+ *     Prefund transfers MUST only go to EntryPoint.
+ *
+ * INVARIANT I5:
+ *     EntryPoint address is immutable post-deployment.
+ *
+ * INVARIANT I6:
+ *     No internal state mutation occurs during signature validation.
+ *
+ * ============================================================================
+ * 7. GAS ECONOMICS MODEL
+ * ============================================================================
+ *
+ * WHY PREFUND EXISTS:
+ *
+ *     Bundlers must be economically compensated to include UserOperations.
+ *
+ * HOW IT WORKS:
+ *
+ *     1. EntryPoint calculates required gas cost.
+ *     2. EntryPoint determines missingAccountFunds.
+ *     3. Wallet transfers exact missing amount.
+ *     4. EntryPoint compensates bundler.
+ *
+ * WHAT IF WALLET HAS INSUFFICIENT ETH?
+ *
+ *     Operation fails.
+ *
+ * WHAT IF WALLET OVERPAYS?
+ *
+ *     EntryPoint manages precise accounting and refunds excess deposit.
+ *
+ * ECONOMIC SECURITY PROPERTY:
+ *
+ *     Wallet pays exact required prefund.
+ *     Bundler is guaranteed compensation.
+ *
+ * ============================================================================
+ * 8. THREAT MODEL
+ * ============================================================================
+ *
+ * PROTECTED AGAINST:
+ *
+ *     • Unauthorized execution by random addresses
+ *     • Signature forgery
+ *     • Cross-chain replay (hash includes chainId)
+ *     • Cross-EntryPoint replay
+ *     • Gas griefing via restricted prefund logic
+ *
+ * NOT PROTECTED AGAINST:
+ *
+ *     • Compromised owner private key
+ *     • Malicious EntryPoint (explicit trust assumption)
+ *
+ * ============================================================================
+ * 9. SECURITY DESIGN PHILOSOPHY
+ * ============================================================================
+ *
+ * This implementation is intentionally minimal:
+ *
+ *     • Single owner ECDSA signature scheme
+ *     • No multisig logic
+ *     • No paymaster integration
+ *     • No session keys
+ *     • No upgradeability
+ *
+ * Purpose:
+ *     Serve as a minimal reference ERC-4337 smart account.
+ *
+ * It is suitable as:
+ *
+ *     • Educational reference implementation
+ *     • Audit training example
+ *     • Base layer for production extensions
+ *
+ * ============================================================================
+ */
 contract AccountEAA is IAccount, Ownable {
-    /*////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-                                         ERRORS
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //                                    ERRORS
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     error AccountEAA___Modifer__CallNotFromEntryPoint();
     error AccountEAA___Modifier__CallNotFromOwnerOrEntryPoint();
     error AccountEAA___Execute__CallFailed(bytes);
@@ -86,12 +305,42 @@ contract AccountEAA is IAccount, Ownable {
     /*////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
                                          MODIFIERS
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+    /**
+     * @dev Restricts function access exclusively to EntryPoint.
+     *
+     * SECURITY PURPOSE:
+     * Ensures that only the trusted EntryPoint contract
+     * can trigger validation or prefunding logic.
+     *
+     * PREVENTS:
+     * - External attackers calling validateUserOp().
+     * - Direct prefund draining attempts.
+     *
+     * REVERT CONDITION:
+     * If msg.sender != EntryPoint.
+     */
+
     modifier onlyEntryPoint() {
         if (msg.sender != address(i_entryPoint)) {
             revert AccountEAA___Modifer__CallNotFromEntryPoint();
         }
         _;
     }
+
+    /**
+     * @dev Restricts access to either:
+     * - The Owner (direct control)
+     * - The EntryPoint (AA execution path)
+     *
+     * SECURITY PURPOSE:
+     * Allows two valid execution paths:
+     *
+     * 1. Direct Owner execution (manual control)
+     * 2. EntryPoint mediated execution (ERC-4337 flow)
+     *
+     * PREVENTS:
+     * - Arbitrary contract calls by unauthorized addresses.
+     */
 
     modifier onlyOwnerOrEntryPoint() {
         if (msg.sender != owner() && msg.sender != address(i_entryPoint)) {
@@ -100,23 +349,282 @@ contract AccountEAA is IAccount, Ownable {
         _;
     }
 
-    /*////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-                                         -FUNCTIONS-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //                                     -FUNCTIONS-
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /**
+     * @param entryPoint The deployed ERC-4337 EntryPoint address.
+     *
+     * @dev
+     * Sets immutable EntryPoint reference.
+     *
+     * SECURITY:
+     * EntryPoint address cannot be modified after deployment.
+     *
+     * TRUST:
+     * EntryPoint is assumed correct and non-malicious.
+     */
+
     constructor(address entryPoint) Ownable(msg.sender) {
         i_entryPoint = IEntryPoint(entryPoint);
     }
 
-    /*////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-                                         RECEIVE FUNCTIONS-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //                                    RECEIVE FUNCTIONS-
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     receive() external payable {
         // Handle received ETH
     }
 
-    /*////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-                                         EXTERNAL FUNCTIONS
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //                                     EXTERNAL FUNCTIONS
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /**
+     * @notice Function validateUserOp()
+     * ============================================================================
+     * @notice ERC-4337 validation entrypoint for this Smart Contract Account.
+     * ============================================================================
+     *
+     * @dev
+     * This function is the mandatory validation gate required by ERC-4337.
+     *
+     * It acts as the wallet’s security checkpoint before execution.
+     *
+     * The EntryPoint contract calls this function before executing
+     * any UserOperation submitted by a bundler.
+     *
+     * The wallet must determine:
+     *
+     *     "Was this operation genuinely authorized by my owner?"
+     *
+     * If YES → execution may continue.
+     * If NO  → the entire operation must be rejected.
+     *
+     * ============================================================================
+     * PARAMETERS
+     * ============================================================================
+     *
+     * @param userOp The full PackedUserOperation submitted by a bundler.
+     *
+     *     WHY provided?
+     *         Because validation logic may inspect any field
+     *         (nonce, callData, gas fields, paymaster, etc).
+     *
+     * @param userOpHash The canonical hash computed by EntryPoint.
+     *
+     *     WHY not recomputed locally?
+     *         ERC-4337 defines EntryPoint as the canonical hashing authority.
+     *
+     *     WHAT does it contain?
+     *         - All UserOperation fields
+     *         - EntryPoint address
+     *         - Chain ID
+     *
+     *     WHY include EntryPoint + chainId?
+     *         To prevent cross-chain replay attacks
+     *         and cross-EntryPoint replay attacks.
+     *
+     * @param missingAccountFunds The exact amount of ETH required to prefund execution.
+     *
+     *     WHAT is it?
+     *         The difference between required gas cost
+     *         and the wallet’s current deposit inside EntryPoint.
+     *
+     *     WHY is it needed?
+     *         Bundlers must be guaranteed compensation.
+     *
+     * ============================================================================
+     * ACCESS CONTROL
+     * ============================================================================
+     *
+     * WHO is allowed to call this function?
+     *
+     *     ONLY the EntryPoint contract.
+     *
+     * WHY?
+     *
+     *     Because ERC-4337 centralizes validation coordination
+     *     inside EntryPoint.
+     *
+     * WHAT IF arbitrary addresses could call this?
+     *
+     *     - They could trigger unwanted prefund transfers.
+     *     - They could probe validation behavior.
+     *     - They could grief the wallet.
+     *
+     * ENFORCEMENT:
+     *
+     *     onlyEntryPoint modifier.
+     *
+     * FORMAL PRECONDITION:
+     *
+     *     require(msg.sender == EntryPoint)
+     *
+     * ============================================================================
+     * STEP-BY-STEP EXECUTION FLOW
+     * ============================================================================
+     *
+     * Step 1:
+     *     EntryPoint calls validateUserOp().
+     *
+     * Step 2:
+     *     Wallet verifies signature via _signatureValidation().
+     *
+     * Step 3:
+     *     If signature invalid:
+     *         return SIG_VALIDATION_FAILED.
+     *
+     * Step 4:
+     *     If signature valid:
+     *         return SIG_VALIDATION_SUCCESS (0).
+     *
+     * Step 5:
+     *     If missingAccountFunds > 0:
+     *         wallet transfers ETH to EntryPoint.
+     *
+     * Step 6:
+     *     EntryPoint continues execution if validation succeeded.
+     *
+     * ============================================================================
+     * SIGNATURE VERIFICATION LOGIC
+     * ============================================================================
+     *
+     * HOW is authenticity proven?
+     *
+     *     1. userOpHash is wrapped with Ethereum Signed Message prefix.
+     *     2. ECDSA.recover extracts signer address.
+     *     3. Signer is compared to owner().
+     *
+     * WHY prefix the hash?
+     *
+     *     To prevent signing raw transaction-like hashes
+     *     that could be misused elsewhere.
+     *
+     * WHAT IF signature does not match owner?
+     *
+     *     validationData must signal failure.
+     *
+     * WHAT IF owner private key compromised?
+     *
+     *     Attacker gains full control.
+     *     This is outside contract-level protection.
+     *
+     * ============================================================================
+     * GAS ECONOMICS MODEL
+     * ============================================================================
+     *
+     * Why does prefunding happen during validation?
+     *
+     *     Because bundlers need guaranteed payment
+     *     BEFORE execution begins.
+     *
+     * missingAccountFunds represents:
+     *
+     *     required_prefund - current_deposit
+     *
+     * If missingAccountFunds > 0:
+     *
+     *     Wallet must transfer exactly that amount to EntryPoint.
+     *
+     * If missingAccountFunds == 0:
+     *
+     *     No transfer occurs.
+     *
+     * SECURITY PROPERTY:
+     *
+     *     ETH prefunding can only go to EntryPoint.
+     *
+     * WHAT IF transfer fails?
+     *
+     *     Entire operation reverts.
+     *
+     * ECONOMIC INVARIANT:
+     *
+     *     Wallet never overpays.
+     *     Wallet never underpays.
+     *
+     * ============================================================================
+     * FORMAL POSTCONDITIONS
+     * ============================================================================
+     *
+     * Q1:
+     *     Returns 0 only if signature valid.
+     *
+     * Q2:
+     *     Returns non-zero if signature invalid.
+     *
+     * Q3:
+     *     If missingAccountFunds > 0:
+     *         ETH transferred to EntryPoint.
+     *
+     * Q4:
+     *     No persistent state variables are modified.
+     *
+     * ============================================================================
+     * SECURITY INVARIANTS
+     * ============================================================================
+     *
+     * INVARIANT 1:
+     *     Caller must be EntryPoint.
+     *
+     * INVARIANT 2:
+     *     Invalid signatures must never return success.
+     *
+     * INVARIANT 3:
+     *     Prefund transfers must only go to EntryPoint.
+     *
+     * INVARIANT 4:
+     *     No storage mutation during validation.
+     *
+     * ============================================================================
+     * THREAT MODEL ANALYSIS
+     * ============================================================================
+     *
+     * PROTECTED AGAINST:
+     *
+     *     - Forged signatures.
+     *     - Unauthorized direct validation calls.
+     *     - Gas-draining via prefund manipulation.
+     *     - Replay across chains or EntryPoints.
+     *
+     * TRUST ASSUMPTIONS:
+     *
+     *     - EntryPoint implementation is correct.
+     *     - Owner private key remains secure.
+     *
+     * NOT PROTECTED AGAINST:
+     *
+     *     - Malicious EntryPoint contract.
+     *     - Compromised owner key.
+     *
+     * ============================================================================
+     * ERC-4337 COMPLIANCE MAPPING
+     * ============================================================================
+     *
+     * Requirement:
+     *     Account MUST implement validateUserOp().
+     *
+     * ✔ Implemented.
+     *
+     * Requirement:
+     *     MUST return validationData.
+     *
+     * ✔ Returns SIG_VALIDATION_SUCCESS or failure.
+     *
+     * Requirement:
+     *     MUST handle prefunding.
+     *
+     * ✔ _payPrefund(missingAccountFunds).
+     *
+     * ============================================================================
+     *
+     * @return validationData
+     *     0  → signature valid
+     *     ≠0 → signature invalid
+     *
+     * ============================================================================
+     */
+
     function validateUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 missingAccountFunds)
         external
         onlyEntryPoint
@@ -125,6 +633,87 @@ contract AccountEAA is IAccount, Ownable {
         validationData = _signatureValidation(userOp, userOpHash);
         _payPrefund(missingAccountFunds);
     }
+
+    /**
+     * @notice Executes arbitrary call from wallet.
+     *
+     * @param destAddress Target contract address.
+     * @param value ETH value to send.
+     * @param abiEncodedFunctionData Encoded function call data.
+     *
+     * BEHAVIOR:
+     *
+     * Performs low-level call:
+     *     destAddress.call{value: value}(data)
+     *
+     * ACCESS CONTROL:
+     *
+     * Allowed callers:
+     *     - Owner (direct execution)
+     *     - EntryPoint (AA flow)
+     *
+     * SECURITY:
+     * Reverts if external call fails.
+     *
+     * RISKS:
+     * - If destAddress is malicious,
+     *   wallet may lose funds.
+     *
+     * Responsibility lies with owner signature.
+     *
+     * ============================================================================
+     * FORMAL SPEC AND WITH WHY WHAT IF Q/A:
+     * ============================================================================
+     *
+     * PURPOSE:
+     *     Executes arbitrary external call.
+     *
+     * FORMAL PRECONDITIONS:
+     *
+     * P1:
+     *     Caller == Owner OR EntryPoint.
+     *
+     * WHY?
+     *     Prevent arbitrary fund transfers.
+     *
+     * ENFORCEMENT:
+     *     onlyOwnerOrEntryPoint modifier.
+     *
+     * P2:
+     *     destAddress != zero address (implicit assumption).
+     *
+     * FORMAL POSTCONDITIONS:
+     *
+     * Q1:
+     *     If external call succeeds → no revert.
+     *
+     * Q2:
+     *     If external call fails → revert with error data.
+     *
+     * SECURITY QUESTIONS:
+     *
+     * WHY allow EntryPoint?
+     *     Required for ERC-4337 mediated execution.
+     *
+     * WHY allow Owner?
+     *     Enables direct manual control.
+     *
+     * WHAT IF destAddress malicious?
+     *     Wallet trusts Owner's signature.
+     *
+     * WHAT IF reentrancy?
+     *     No state mutation after call.
+     *     No internal balance accounting.
+     *
+     * GAS ECONOMICS:
+     *
+     * Gas forwarded fully to destAddress.
+     * Gas limits controlled by EntryPoint during AA flow.
+     *
+     * ERC-4337 COMPLIANCE:
+     *
+     * ✔ Enables execution of validated UserOperations.
+     */
 
     function execute(address destAddress, uint256 value, bytes calldata abiEncodedFunctionData)
         external
@@ -136,9 +725,65 @@ contract AccountEAA is IAccount, Ownable {
         }
     }
 
-    /*////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-                                         INTERNAL FUNCTIONS
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //                                    INTERNAL FUNCTIONS
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /**
+     * @dev Verifies that userOp signature matches owner.
+     *
+     * PROCESS:
+     *
+     * 1. Convert userOpHash to Ethereum signed message hash.
+     * 2. Recover signer via ECDSA.
+     * 3. Compare signer with owner().
+     *
+     * RETURNS:
+     *     SIG_VALIDATION_SUCCESS (0) if valid.
+     *     SIG_VALIDATION_FAILED otherwise.
+     *
+     * SECURITY:
+     * Prevents unauthorized execution.
+     *
+     * CRYPTO ASSUMPTION:
+     * ECDSA implementation is secure (OpenZeppelin).
+     *
+     *
+     * ============================================================================
+     * FORMAL SPEC AND WITH WHY WHAT IF Q/A:
+     * ============================================================================
+     *
+     * PURPOSE:
+     *     Verify cryptographic authenticity.
+     *
+     * FORMAL PRECONDITION:
+     *
+     * P1:
+     *     userOpHash must represent entire UserOperation.
+     *
+     * WHY?
+     *     Prevent partial signature manipulation.
+     *
+     * FORMAL POSTCONDITION:
+     *
+     * Q1:
+     *     Return success only if recovered signer == owner().
+     *
+     * SECURITY QUESTIONS:
+     *
+     * WHY use toEthSignedMessageHash?
+     *     Prevent raw hash replay attacks.
+     *
+     * WHAT IF signature malleable?
+     *     OpenZeppelin ECDSA prevents malleability.
+     *
+     * WHAT IF wrong owner?
+     *     Validation fails.
+     *
+     * ERC-4337 COMPLIANCE:
+     *
+     * ✔ Implements signature verification requirement.
+     */
+
     function _signatureValidation(PackedUserOperation calldata userOp, bytes32 userOpHash)
         internal
         view
@@ -152,6 +797,64 @@ contract AccountEAA is IAccount, Ownable {
         return SIG_VALIDATION_SUCCESS;
     }
 
+    /**
+     * @dev Transfers required prefund ETH to EntryPoint.
+     *
+     * @param missingAccountFunds Amount of ETH required.
+     *
+     * BEHAVIOR:
+     * If missingAccountFunds > 0:
+     *     Send ETH to EntryPoint.
+     *
+     * GAS LOGIC:
+     * Gas forwarded = type(uint256).max
+     * Ensures no accidental gas shortage.
+     *
+     * SECURITY:
+     * - Only callable by EntryPoint.
+     * - Sends ETH exclusively to EntryPoint.
+     *
+     * REVERTS:
+     * If transfer fails.
+     * ============================================================================
+     * FORMAL SPEC AND WITH WHY WHAT IF Q/A:
+     * ============================================================================
+     *
+     * PURPOSE:
+     *     Transfers required ETH to EntryPoint.
+     *
+     * FORMAL PRECONDITION:
+     *
+     * P1:
+     *     Caller == EntryPoint.
+     *
+     * WHY?
+     *     Prevent draining wallet.
+     *
+     * FORMAL POSTCONDITION:
+     *
+     * Q1:
+     *     If missingAccountFunds == 0 → no transfer.
+     *
+     * Q2:
+     *     If > 0 → transfer exact amount.
+     *
+     * SECURITY QUESTIONS:
+     *
+     * WHY unlimited gas?
+     *     Ensure transfer cannot fail due to gas restriction.
+     *
+     * WHAT IF transfer fails?
+     *     Revert.
+     *
+     * WHAT IF attacker tries direct call?
+     *     onlyEntryPoint blocks.
+     *
+     * ERC-4337 COMPLIANCE:
+     *
+     * ✔ Handles prefunding requirement.
+     */
+
     function _payPrefund(uint256 missingAccountFunds) internal onlyEntryPoint {
         if (missingAccountFunds != 0) {
             (bool success,) = payable(msg.sender).call{value: missingAccountFunds, gas: type(uint256).max}("");
@@ -162,9 +865,27 @@ contract AccountEAA is IAccount, Ownable {
         }
     }
 
-    /*////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-                                         GETTERS FUNCTIONS
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //                                     GETTERS FUNCTIONS
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /**
+     * ============================================================================
+     * @notice Returns the immutable EntryPoint address.
+     * ============================================================================
+     *
+     * PURPOSE:
+     *     Transparency and auditability.
+     *
+     * WHY expose?
+     *
+     *     Frontends and auditors may verify trust anchor.
+     *
+     * SECURITY:
+     *
+     *     Pure getter.
+     *     No state mutation.
+     */
+
     function getEntryPointAddress() external view returns (address) {
         return address(i_entryPoint);
     }

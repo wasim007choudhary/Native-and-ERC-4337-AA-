@@ -7,7 +7,9 @@ import {AccountEAA} from "../src/AA-ETHEREUN/Account.sol";
 import {HelperConfig} from "./HelperConfig.sol";
 
 contract DeployAccountEAA is Script {
-    function run() public {}
+    function run() public {
+        depolyEAA();
+    }
 
     function depolyEAA() public returns (HelperConfig, AccountEAA) {
         HelperConfig helperConfig = new HelperConfig();
