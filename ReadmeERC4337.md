@@ -1,3 +1,12 @@
+<p align="center">
+
+[![X (Twitter)](https://img.shields.io/badge/X-@i___wasim-black?logo=x)](https://x.com/i___wasim)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Wasim%20Choudhary-blue?logo=linkedin)](https://www.linkedin.com/in/wasim-007-choudhary/)
+[![LinkedIn ID](https://img.shields.io/badge/LinkedIn%20ID-wasim--007--choudhary-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/wasim-007-choudhary/)
+
+</p>
+
+
 # 🚀 ERC-4337 Account Abstraction: Architecture and Workflow
 
 Account Abstraction (AA) lets smart contract wallets behave like user accounts on Ethereum. Unlike normal externally-owned accounts (EOAs) that use a private key to start transactions, AA lets a smart contract decide when and how to act.
