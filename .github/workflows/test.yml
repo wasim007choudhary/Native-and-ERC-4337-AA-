@@ -12,7 +12,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout
+        uses: actions/checkout@v5
         with:
           submodules: recursive
 
@@ -21,17 +22,29 @@ jobs:
         with:
           version: nightly
 
-      - name: Show Forge version
+      - name: Cache Foundry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.foundry
+            cache
+            out
+          key: ${{ runner.os }}-foundry-${{ hashFiles('foundry.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-foundry-
+
+      - name: Show Forge Version
         run: forge --version
 
-      - name: Run Forge fmt
+      - name: Format Check
         run: forge fmt --check
 
-      - name: Run Forge build
+      - name: Build
         run: forge build --sizes
 
       - name: Run EVM Tests
         run: forge test --match-path "test/ETHAA/*" -vvv
+
 
 
   zksync:
@@ -39,17 +52,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout
+        uses: actions/checkout@v5
         with:
           submodules: recursive
 
       - name: Install zkSync Foundry
-        run: |
-          curl -L https://foundry.paradigm.xyz | bash
-          ~/.foundry/bin/foundryup
-          ~/.foundry/bin/foundryup-zksync
+        uses: matter-labs/foundry-zksync-action@v1
 
-      - name: Show Forge version
+      - name: Cache zkSync Build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.foundry
+            cache-zk
+            out-zk
+          key: ${{ runner.os }}-zksync-${{ hashFiles('foundry.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-zksync-
+
+      - name: Show Forge Version
         run: forge --version
 
       - name: Run zkSync Tests
