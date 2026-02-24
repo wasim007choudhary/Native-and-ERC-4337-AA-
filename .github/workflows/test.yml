@@ -46,7 +46,6 @@ jobs:
         run: forge test --match-path "test/ETHAA/*" -vvv
 
 
-
   zksync:
     name: zkSync Foundry (Native AA)
     runs-on: ubuntu-latest
@@ -58,18 +57,10 @@ jobs:
           submodules: recursive
 
       - name: Install zkSync Foundry
-        uses: matter-labs/foundry-zksync-action@v1
-
-      - name: Cache zkSync Build
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.foundry
-            cache-zk
-            out-zk
-          key: ${{ runner.os }}-zksync-${{ hashFiles('foundry.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-zksync-
+        run: |
+          curl -L https://raw.githubusercontent.com/matter-labs/foundry-zksync/main/install-foundry-zksync.sh | bash
+          echo "$HOME/.foundry/bin" >> $GITHUB_PATH
+          foundryup-zksync
 
       - name: Show Forge Version
         run: forge --version
