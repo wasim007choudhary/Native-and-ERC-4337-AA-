@@ -11,19 +11,23 @@ env:
   FOUNDRY_PROFILE: ci
 
 jobs:
-  check:
-    name: Foundry project
+
+  evm:
+    name: Vanilla Foundry (ERC4337 / EVM)
     runs-on: ubuntu-latest
     permissions:
       contents: read
+
     steps:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
           submodules: recursive
 
-      - name: Install Foundry
+      - name: Install Vanilla Foundry
         uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
 
       - name: Show Forge version
         run: forge --version
@@ -34,5 +38,29 @@ jobs:
       - name: Run Forge build
         run: forge build --sizes
 
-      - name: Run Forge tests
-        run: forge test -vvv
+      - name: Run EVM Tests
+        run: forge test --match-path "test/ETHAA/*" -vvv
+
+
+  zksync:
+    name: zkSync Foundry (Native AA)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Install zkSync Foundry
+        run: |
+          curl -L https://raw.githubusercontent.com/matter-labs/foundry-zksync/main/install.sh | bash
+          ~/.foundry/bin/foundryup -v 1.3.5-foundry-zksync-v0.1.7
+
+      - name: Show Forge version
+        run: forge --version
+
+      - name: Run zkSync Tests
+        run: forge test --match-path "test/ZKAA/*" -vvv
