@@ -765,12 +765,6 @@ contract AccountZKAA is IAccount, Ownable {
                 INonceHolder.incrementMinNonceIfEquals,
                 (_transaction.nonce)
             )
-        );
-        SystemContractsCaller.systemCallWithPropagatedRevert(
-            uint32(gasleft()),
-            address(NONCE_HOLDER_SYSTEM_CONTRACT),
-            0,
-            abi.encodeCall(INonceHolder.incrementMinNonceIfEquals, (_transaction.nonce))
         ); //encodeCall is modern and more safe than withSelector etc and they are manual type
 
         ///next we will check fee to pa for the transction if it has or not
