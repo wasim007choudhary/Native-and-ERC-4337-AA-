@@ -3,11 +3,11 @@
 pragma solidity ^0.8.28;
 
 import {Test, console} from "forge-std/Test.sol";
-import {DeployAccountEAA} from "../../script/DeployAccountEAA.sol";
-import {HelperConfig} from "../../script/HelperConfig.sol";
+import {DeployAccountEAA} from "../../script/DeployAccountEAA.s.sol";
+import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {AccountEAA} from "../../src/AA-ETHEREUN/Account.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
-import {SendingPackedUserOP, IEntryPoint} from "../../script/SendingPackedUserOP.sol";
+import {SendingPackedUserOP, IEntryPoint} from "../../script/SendingPackedUserOP.s.sol";
 import {PackedUserOperation} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {ECDSA} from "lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";

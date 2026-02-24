@@ -1048,7 +1048,7 @@ Each character – the Hero (wallet), Patron (paymaster), Courier (bundler), and
 ## ⚙️ HelperConfig.s.sol Deep Dive
 
 🔗 **Source:**  
-https://github.com/wasim007choudhary/Native-and-ERC-4337-AA-/blob/main/script/HelperConfig.sol
+https://github.com/wasim007choudhary/Native-and-ERC-4337-AA-/blob/main/script/HelperConfig.s.sol
 
 ---
 
@@ -1097,10 +1097,10 @@ The code’s NatSpec isn’t shown here, but the logic is clear: the HelperConfi
 Imagine you have a travel guidebook (HelperConfig) that tells you which local currency and power adapter to use in each country. When you arrive (getConfig()), the guide automatically gives you the right currency notes (EntryPoint address) and adapter (token address) for that country. If you tried to use the wrong adapter because you ignored the guide, your device (transaction) wouldn’t work (would revert). The guide makes the trip smooth by providing the correct setup for wherever you are.
 
 ---
-## 🚀 SendingPackedUserOP.sol Deep Dive
+## 🚀 SendingPackedUserOP.s.sol Deep Dive
 
 🔗 **Source:**  
-https://github.com/wasim007choudhary/Native-and-ERC-4337-AA-/blob/main/script/SendingPackedUserOP.sol
+https://github.com/wasim007choudhary/Native-and-ERC-4337-AA-/blob/main/script/SendingPackedUserOP.s.sol
 
 ---
 

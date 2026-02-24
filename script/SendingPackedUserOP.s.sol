@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 
 import {Script} from "forge-std/Script.sol";
 import {PackedUserOperation} from "lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
-import {HelperConfig} from "./HelperConfig.sol";
+import {HelperConfig} from "./HelperConfig.s.sol";
 import {AccountEAA} from "../src/AA-ETHEREUN/Account.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {MessageHashUtils} from "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";

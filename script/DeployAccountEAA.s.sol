@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 
 import {Script} from "forge-std/Script.sol";
 import {AccountEAA} from "../src/AA-ETHEREUN/Account.sol";
-import {HelperConfig} from "./HelperConfig.sol";
+import {HelperConfig} from "./HelperConfig.s.sol";
 
 contract DeployAccountEAA is Script {
     function run() public {

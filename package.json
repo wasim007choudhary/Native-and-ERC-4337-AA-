@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "ethers": "^6.16.0",
+    "fs-extra": "^11.3.3",
+    "typescript": "^5.9.3",
+    "zksync-ethers": "^6.21.1"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4"
+  }
+}
