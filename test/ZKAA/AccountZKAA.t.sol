@@ -15,9 +15,6 @@ import {
     ACCOUNT_VALIDATION_SUCCESS_MAGIC
 } from "lib/foundry-era-contracts/src/system-contracts/contracts/interfaces/IAccount.sol";
 
-import {
-    SystemContractsCaller
-} from "lib/foundry-era-contracts/src/system-contracts/contracts/libraries/SystemContractsCaller.sol";
 import {MessageHashUtils} from "lib/openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract AccountZKAATest is Test {
