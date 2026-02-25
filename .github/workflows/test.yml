@@ -45,28 +45,27 @@ jobs:
       - name: Run EVM Tests
         run: forge test --match-path "test/ETHAA/*" -vvv
 
+  
   zksync:
-   name: zkSync Foundry (Native AA)
-   runs-on: ubuntu-latest
+    name: zkSync Foundry (Native AA)
+    runs-on: ubuntu-latest
 
-   steps:
-     - name: Checkout
-       uses: actions/checkout@v5
-       with:
-         submodules: recursive
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
 
-     - name: Install Foundry
-       uses: foundry-rs/foundry-toolchain@v1
-       with:
-         version: nightly
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
 
-     - name: Install zkSync Foundry Fork
-       run: |
-         foundryup
-         foundryup-zksync
+      - name: Prepare Foundry Directories
+        run: |
+          mkdir -p ~/.foundry/bin
+          mkdir -p ~/.config/.foundry/bin
 
-     - name: Show Forge Version
-       run: forge --version
+      - name: Switch to zkSync Fork
+        run: foundryup-zksync
 
-     - name: Run zkSync Tests
-       run: forge test --match-path "test/ZKAA/*" -vvv
+      - run: forge --version
+      - run: forge test --match-path "test/ZKAA/*" -vvv              
