@@ -15,26 +15,30 @@ ERC-4337 is the standard that brings AA to Ethereum **without changing the proto
 
 # 📖 Table of Contents
 
-- [ERC-4337 Account Abstraction: Architecture and Workflow](#erc-4337-account-abstraction-architecture-and-workflow)
-- [Motivation and Benefits](#motivation-and-benefits)
-- [History and Emergence of ERC-4337](#history-and-emergence-of-erc-4337)
-- [Key Components and Roles](#key-components-and-roles)
-  - [EntryPoint](#entrypoint)
-  - [Bundler](#bundler)
-  - [Paymaster](#paymaster)
-  - [Smart Contract Wallet (Account)](#-smart-contract-wallet-account)
-  - [The UserOperation Structure](#-the-useroperation-structure)
-- [Lifecycle: Step-by-Step UserOperation Flow](#-lifecycle-step-by-step-useroperation-flow)
-- [Signature Validation and Security Model](#-signature-validation-and-security-model)
-- [Gas Flow and Payment System](#-gas-flow-and-payment-system)
-- [Mempool and Bundling](#-mempool-and-bundling)
-- [Common Pitfalls and “What Can Go Wrong”](#-common-pitfalls-and-what-can-go-wrong)
-- [Threat Model and Limitations](#-threat-model-and-limitations)
-- [Final Mental Model for Developers](#-final-mental-model-for-developers)
-- [Repo Script & Workflow Explanation](#-repo-script--workflow-explanation)
-  - [HelperConfig.s.sol Deep Dive](#helperconfigsol-deep-dive)
-  - [SendingPackedUserOP.s.sol Deep Dive](#-sendingpackeduseropsol-deep-dive)
-- [Sources](#-sources)
+- [🚀 ERC-4337 Account Abstraction: Architecture and Workflow](#-erc-4337-account-abstraction-architecture-and-workflow)
+  - [🎯 Motivation and Benefits](#-motivation-and-benefits)
+  - [❓ Frequently Asked Questions](#-frequently-asked-questions)
+  - [🧠 Analogy](#-analogy)
+- [🏛 History and Emergence of ERC-4337](#-history-and-emergence-of-erc-4337)
+- [🧩 Key Components and Roles](#-key-components-and-roles)
+  - [🏛 EntryPoint](#-entrypoint)
+  - [🚚 Bundler](#-bundler)
+  - [⛽ Paymaster](#-paymaster)
+  - [👛 Smart Contract Wallet (Account)](#-smart-contract-wallet-account)
+  - [📦 The UserOperation Structure](#-the-useroperation-structure)
+- [🔄 Lifecycle: Step-by-Step UserOperation Flow](#-lifecycle-step-by-step-useroperation-flow)
+- [🔐 Signature Validation and Security Model](#-signature-validation-and-security-model)
+- [⛽ Gas Flow and Payment System](#-gas-flow-and-payment-system)
+- [📦 Mempool and Bundling](#-mempool-and-bundling)
+- [🏗 Common Pitfalls and “What Can Go Wrong”](#-common-pitfalls-and-what-can-go-wrong)
+- [🛡️ Threat Model and Limitations](#--threat-model-and-limitations)
+- [🧠 Final Mental Model for Developers](#-final-mental-model-for-developers)
+- [🧩 Repo Script & Workflow Explanation](#-repo-script--workflow-explanation)
+  - [🚀 HelperConfig.s.sol Deep Dive](#--helperconfigssol-deep-dive)
+  - [🚀 SendingPackedUserOP.s.sol Deep Dive](#-sendingpackeduseropssol-deep-dive)
+- [📚 Sources](#-sources)
+
+
 
 ---
 
@@ -842,7 +846,7 @@ Then it stays pending. This is similar to low-fee Ethereum transactions: if nobo
 The UserOperation mempool is like a mailroom. All incoming letters (operations) sit on a table. Couriers (bundlers) periodically come by, pick up valid letters, and deliver them. If a letter is missing information or has no postage (bad nonce, low fee), the couriers won’t take it. People (wallets) can drop off letters (send ops) or even call a courier (RPC) to pick them up. But until a courier bundles and sends them, the letters just wait in the mailroom.
 
 ---
-# ⚠️ Common Pitfalls and “What Can Go Wrong”
+# 🏗 Common Pitfalls and “What Can Go Wrong”
 
 Despite its power, ERC-4337 has failure modes developers must watch for. Here are common pitfalls and failure scenarios:
 
@@ -1045,7 +1049,7 @@ Each character – the Hero (wallet), Patron (paymaster), Courier (bundler), and
 # 🧩 Repo Script & Workflow Explanation
 
 
-## ⚙️ HelperConfig.s.sol Deep Dive
+## 🚀  HelperConfig.s.sol Deep Dive
 
 🔗 **Source:**  
 https://github.com/wasim007choudhary/Native-and-ERC-4337-AA-/blob/main/script/HelperConfig.s.sol
