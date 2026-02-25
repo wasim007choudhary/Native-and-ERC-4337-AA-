@@ -58,12 +58,14 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install zkSync Foundry
+      - name: Clone zkSync Foundry Fork
         run: |
-          cargo install --git https://github.com/matter-labs/foundry-zksync --locked forge-zksync
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          git clone https://github.com/matter-labs/foundry-zksync.git
+          cd foundry-zksync
+          cargo build --release
+          echo "$PWD/target/release" >> $GITHUB_PATH
 
-      - name: Show Version
+      - name: Verify Forge Version
         run: forge --version
 
       - name: Run zkSync Tests
