@@ -55,17 +55,17 @@ jobs:
         with:
           submodules: recursive
 
-      - uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: nightly
+      - name: Install Rust (required by zkSync Foundry)
+        uses: dtolnay/rust-toolchain@stable
 
-      - name: Prepare Foundry Directories
+      - name: Install zkSync Foundry
         run: |
-          mkdir -p ~/.foundry/bin
-          mkdir -p ~/.config/.foundry/bin
+          curl -L https://raw.githubusercontent.com/matter-labs/foundry-zksync/main/install-foundry-zksync.sh | bash
+          echo "$HOME/.foundry/bin" >> $GITHUB_PATH
+          ~/.foundry/bin/foundryup-zksync
 
-      - name: Switch to zkSync Fork
-        run: foundryup-zksync
+      - name: Show Forge Version
+        run: forge --version
 
-      - run: forge --version
-      - run: forge test --match-path "test/ZKAA/*" -vvv              
+      - name: Run zkSync Tests
+        run: forge test --match-path "test/ZKAA/*" -vvv
