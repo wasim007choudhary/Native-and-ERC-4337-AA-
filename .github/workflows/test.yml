@@ -55,21 +55,30 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
 
-      - name: Clone zkSync Foundry Fork
+      - name: Clone zkSync Foundry
+        run: git clone https://github.com/matter-labs/foundry-zksync.git
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            foundry-zksync/target
+          key: ${{ runner.os }}-cargo-zksync-${{ hashFiles('foundry-zksync/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-zksync-
+
+      - name: Build zkSync Forge Only
         run: |
-          git clone https://github.com/matter-labs/foundry-zksync.git
           cd foundry-zksync
-          cargo build --release
+          cargo build --release -p forge
           echo "$PWD/target/release" >> $GITHUB_PATH
 
-      - name: Verify Forge Version
-        run: forge --version
-
-      - name: Run Normal zkSync Tests
+      - name: Run zkSync Tests
         run: forge test --match-path "test/ZKAA/*" --zksync -vvv --no-match-test testZKfunctionValidateTransaction
 
-      - name: Run System Mode Tests
+      - name: Run System Mode Test
         run: forge test --mt testZKfunctionValidateTransaction --zksync --system-mode=true -vvv
