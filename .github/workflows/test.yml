@@ -68,5 +68,8 @@ jobs:
       - name: Verify Forge Version
         run: forge --version
 
-      - name: Run zkSync Tests
-        run: forge test --match-path "test/ZKAA/*" -vvv
+      - name: Run Normal zkSync Tests
+        run: forge test --match-path "test/ZKAA/*" --zksync -vvv --no-match-test testZKfunctionValidateTransaction
+
+      - name: Run System Mode Tests
+        run: forge test --mt testZKfunctionValidateTransaction --zksync --system-mode=true -vvv
