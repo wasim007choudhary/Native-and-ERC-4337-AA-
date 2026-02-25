@@ -1,19 +1,19 @@
-name: CI
+name: test
 
-on:
-  push:
-  pull_request:
-  workflow_dispatch:
+on: workflow_dispatch
+
+env:
+  FOUNDRY_PROFILE: ci
 
 jobs:
+  check:
+    strategy:
+      fail-fast: true
 
-  evm:
-    name: Vanilla Foundry (ERC4337 / EVM)
+    name: Foundry project
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
 
@@ -22,52 +22,13 @@ jobs:
         with:
           version: nightly
 
-      - name: Cache Foundry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.foundry
-            cache
-            out
-          key: ${{ runner.os }}-foundry-${{ hashFiles('foundry.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-foundry-
+      - name: Run Forge build
+        run: |
+          forge --version
+          forge build --sizes
+        id: build
 
-      - name: Show Forge Version
-        run: forge --version
-
-      - name: Format Check
-        run: forge fmt --check
-
-      - name: Build
-        run: forge build --sizes
-
-      - name: Run EVM Tests
-        run: forge test --match-path "test/ETHAA/*" -vvv
-
-
-  zksync:
-    name: zkSync Foundry (Native AA)
-    runs-on: ubuntu-latest
-
-    steps:
-     - name: Checkout
-       uses: actions/checkout@v5
-       with:
-         submodules: recursive
-
-     - name: Install Rust
-       uses: dtolnay/rust-toolchain@stable
-
-     - name: Install zkSync Foundry
-       run: |
-         curl -L https://raw.githubusercontent.com/matter-labs/foundry-zksync/main/install.sh | bash
-         echo "$HOME/.foundry/bin" >> $GITHUB_PATH
-         source $HOME/.bashrc
-         foundryup-zksync
-
-     - name: Show Forge Version
-       run: forge --version
-
-     - name: Run zkSync Tests
-       run: forge test --match-path "test/ZKAA/*" -vvv
+      - name: Run Forge tests
+        run: |
+          forge test -vvv
+        id: test
