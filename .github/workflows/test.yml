@@ -51,19 +51,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-        with:
-          submodules: recursive
+     - name: Checkout
+       uses: actions/checkout@v5
+       with:
+         submodules: recursive
 
-      - name: Install zkSync Foundry
-        run: |
-          curl -L https://raw.githubusercontent.com/matter-labs/foundry-zksync/main/install-foundry-zksync.sh | bash
-          echo "$HOME/.foundry/bin" >> $GITHUB_PATH
-          foundryup-zksync
+     - name: Install Rust
+       uses: dtolnay/rust-toolchain@stable
 
-      - name: Show Forge Version
-        run: forge --version
+     - name: Install zkSync Foundry
+       run: |
+         curl -L https://raw.githubusercontent.com/matter-labs/foundry-zksync/main/install.sh | bash
+         echo "$HOME/.foundry/bin" >> $GITHUB_PATH
+         source $HOME/.bashrc
+         foundryup-zksync
 
-      - name: Run zkSync Tests
-        run: forge test --match-path "test/ZKAA/*" -vvv
+     - name: Show Forge Version
+       run: forge --version
+
+     - name: Run zkSync Tests
+       run: forge test --match-path "test/ZKAA/*" -vvv
